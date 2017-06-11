@@ -1,0 +1,168 @@
+
+ >>> help
+help    prints command summary:
+
+quit    exit application:
+
+connect connects to various system resources:
+  --system              connect to MIL system environment
+  --detector            connect to detector subsystem
+  --display             connect to host system display
+  --led                 connect to led test fixture (if present)
+
+disconnect      frees system resources acquired by "connect":
+  --all                 disconnect from all connected subsystems.
+  --system              disconnect from MIL system environment, digitizer, and
+                        display
+  --detector            disconnect from detector subsystem
+  --display             disconnect from host system display
+  --led                 disconnect from led test fixture
+
+grab    acquires one or more frames:
+  --count arg           number of frames that are to be collected
+  --dstdir arg          sets the path to the destination directory where frame
+                        data is written (default "."
+  --basename arg        base filename for acquired frames saved to disk
+  --darkframe           Collect a dark frame
+  --adc0frame           Collect a adc0 frame
+  --prepare             Prepare frame acquisition but do not start
+  --start               Start previously prepared frame acquisition
+
+load     loads disk file contents into the selected target.:
+  --filename arg        path to disk file to be loaded
+  --regfile             load register settings into imager control logic
+  --imgfile             load image frame into display buffer
+  --commands            load and execute command file
+  --coefficients        load coefficients file for non-linear corrections
+  --fpga-index arg      loads averaged dark frame into the specified slot in
+                        the array of dark frames used by the fpga to generate
+                        interpolated dark frame
+  --bad-pixel           load bad pixel map file
+  --flood               load flood correction frame file
+  --adc0                load adc0 correction frame file
+
+abort   interrupts the task currently underway:
+
+get     returns information on various aspects of device operation:
+  --status
+  --config
+  --version             returns version information
+  --statistics
+  --corrections         display image correction settings
+  --all                 returns a comprehensive summary of system status
+  --regs                dumps imager register contents
+  --io                  dumps io register status
+
+reset   resets various run-time parameters affecting frame acquisition:
+  --linearize                    disable linearization correction
+  --dark                         disable dark correction
+  --flood                        disable flood correction
+  --average                      disable frame average correction
+  --bad-pixel                    disable bad pixel correction
+  --oversampling                 disable oversampling correction
+  --adc0                         disable adc0 correction
+  --all-fpga-darks               clear all dark frames
+  --disable-offset-op            disables the apply offset correction.
+  --disable-saturation-level-op  disable the apply saturation level correction.
+  --disable-flip-op              disable the apply image flip correction.
+  --save-sub-sub-frames          subsub frames are not saved to disk.
+  --save-sub-frames              sub frames are not saved to disk.
+  --save-frames                  frames are not saved to disk.
+
+set     sets various run-time parameters affecting frame acquisition:
+  --dac0 arg                       sets dac 0 offset (default is 64)
+  --dac2 arg                       sets dac2 (default is 40000)
+  --dac3 arg                       sets dac 3 offset (default is 64)
+  --dac5 arg                       sets dac 5 offset (default is 64)
+  --hfw arg                        sets High Full Well on (1) or off (0)
+                                   (default is on)
+  --acquisition-mode-manual        sets the acquisition mode to manual.
+  --acquisition-mode-auto          sets the acquisition mode to auto.
+  --subframes-per-frame arg        sets the number of subframes per frame
+                                   (default is 10)
+  --subsubframes-per-subframe arg  sets the number of subsubframes per subframe
+  --max-frame-rate arg             sets the upper bound for frame rate
+                                   calculation when acquisition mode is set to
+                                   auto (default is 70.0 fps)
+  --frame-trigger-source arg       sets trigger source used to generate frames
+                                   {internal|external} (default is internal)
+  --frame-trigger-mode arg         sets trigger mode used to capture frames
+                                   {step|continuous} (default is continuous)
+  --frame-trigger-edge arg         sets which edge is used to trigger
+                                   acquisition {rising|falling} (default is
+                                   rising)
+  --subsubframe-trigger arg        sets trigger source used to generate
+                                   subsubframes {internal|external} (default is
+                                   internal)
+  --ledport arg                    sets the serial port assigned to the LED
+                                   test fixture (default is "")
+  --imagerport arg                 sets the serial port assigned to the imager
+                                   adapter board (default is "")
+  --exposure-time arg              Sets the time required to collect
+                                   subsubframespersubframe*subframeperframes
+                                   acquisitions.
+  --runnumber arg                  sets the run number of the dataset to be
+                                   processed
+  --subsubframe-trigger-source arg sets the external source used to trigger
+                                   acquisition of subsubframes
+                                   {timer|ledfixture} (default is "timer")
+  --write                          Write contents of imager registers to
+                                   non-volatile memory (wrt command)
+  --linearize                      apply linearization correction
+  --dark                           apply dark correction
+  --flood                          apply flood correction
+  --average                        apply frame average correction
+  --bad-pixel                      apply bad pixel correction
+  --oversampling arg               apply oversampling correction and set the
+                                   oversampling threshold
+  --adc0                           apply adc0 correction
+  --srcdir arg                     sets the path to the source directory where
+                                   correction files are located
+  --dstdir arg                     sets the path to the destination directory
+                                   where frame data is written
+  --subframes arg                  sets the number of subframes per frame
+  --subsubframes arg               sets the number of sub-subframes per
+                                   subframe
+  --frame-readout-format arg       output format of frame data {adu|auto}
+  --hw-electronic-gain-lfw arg     sets hardware electronic gain in low full
+                                   well mode
+  --hw-electronic-gain-hfw arg     sets hardware electronic gain in high full
+                                   well mode
+  --hw-read-noise-lfw arg          sets hardware read noise in low full well
+                                   mode
+  --hw-read-noise-hfw arg          sets hardware read noise in high full well
+                                   mode
+  --image-flip arg                 enables horizontal flip {true|false}
+  --adu-offset arg                 sets the offset value applied to output
+                                   pixels ("0" = off)
+  --dark-offset                    used in conjuntion with adu-offset to flag
+                                   the value for later use when calculating
+                                   interpolated darks.
+  --topped-pixel-crop arg          sets the value that is assigned to saturated
+                                   pixels (0x80000000 = off)
+  --dark-exposure-times arg        sets the exposure times for dark frames.
+  --led arg                        sets the led to one of four states
+                                   {off|red|green|orange}
+  --save-sub-sub-frames            subsub frames are saved to disk
+  --save-sub-frames                sub frames are saved to disk
+  --save-frames                    frames are saved to disk
+  --grab-source arg                where frame data originates
+                                   {detector|imager-adapter|sensor}
+  --frame-pattern arg              phantom frame data pattern sensor->{0-6},
+                                   imager-adapter->{0-32}
+  --dr-summation arg               sets DR summation mode on (1) or off (0)
+                                   (default is on)
+  --dr-summation-threshold arg     Sets the time below which DR summation (if
+                                   enabled) is used, and above which
+                                   NDR-Interpolation is used (default is 1.0
+                                   second.)
+  --fpga arg                       name of fpga configuration file
+
+calibrate       do non-uniformity run using LED fixture:
+  --count arg           number of frames to collect
+  --starttime arg       exposure time (in percentage of maximum exposure time)
+                        of first frame (default 0)
+  --increment arg       time increment (in percentage of maximum exposure time)
+                        added to each subsequent frame (default 0)
+  --directory arg       target directory where acquired frames are stored
+  --basename arg        base filename for acquired frames saved to disk
