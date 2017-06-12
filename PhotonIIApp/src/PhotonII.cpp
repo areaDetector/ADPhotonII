@@ -41,33 +41,15 @@ typedef enum {
     PhotonIIFrameDoubleCorrelation
 } PhotonIIFrameType_t;
 
-/** Messages to/from p2util */
 #define PII_SIZEX 768
 #define PII_SIZEY 1024
-/** Time to poll when reading from p2util */
-#define ASYN_POLL_TIME .01 
-#define PII_POLL_DELAY .01 
-#define PII_DEFAULT_TIMEOUT 1.0 
-#define MAX_FILENAME_LEN 256
-/** Time between checking to see if .SFRM file is complete */
-#define FILE_READ_DELAY .01
+#define PII_COMMAND_TIMEOUT 1.0
+#define PII_MAX_FILENAME_LEN 256
+/** Time between checking to see if raw file is complete */
+#define PII_FILE_READ_DELAY .01
+#define PII_FILE_READ_TIMEOUT 1.0 
 
 static const char *driverName = "PhotonII";
-
-/** This function is called when the exposure time timer expires */
-extern "C" {static void timerCallbackC(void *drvPvt)
-{
-    PhotonII *pPvt = (PhotonII *)drvPvt;
-    
-    epicsEventSignal(pPvt->stopEventId_);
-}}
-
-static void statusTaskC(void *drvPvt)
-{
-    PhotonII *pPvt = (PhotonII *)drvPvt;
-    
-    pPvt->statusTask();
-}
 
 static void PhotonIITaskC(void *drvPvt)
 {
@@ -100,23 +82,20 @@ PhotonII::PhotonII(const char *portName, const char *commandPort,
       detSizeX_(PII_SIZEX), detSizeY_(PII_SIZEY)
 {
     int status = asynSuccess;
-    epicsTimerQueueId timerQ;
+    char versionString[20];
     const char *functionName = "PhotonII";
 
-    createParam(PhotonIIFileTimeoutString,  asynParamFloat64, &PhotonIIFileTimeout);
     createParam(PhotonIINumDarksString,     asynParamInt32,   &PhotonIINumDarks);
-    createParam(PhotonIIStatusString,       asynParamOctet,   &PhotonIIStatus);
+
+    epicsSnprintf(versionString, sizeof(versionString), "%d.%d.%d", 
+                  DRIVER_VERSION, DRIVER_REVISION, DRIVER_MODIFICATION);
+    setStringParam(NDDriverVersion, versionString);
 
     /* Create the epicsEvents for signaling to the PhotonII task when acquisition starts and stops */
     startEventId_ = epicsEventMustCreate(epicsEventEmpty);
     stopEventId_ = epicsEventMustCreate(epicsEventEmpty);
-    readoutEventId_ = epicsEventMustCreate(epicsEventEmpty);
-    
-    /* Create the epicsTimerQueue for exposure time handling */
-    timerQ = epicsTimerQueueAllocate(1, epicsThreadPriorityScanHigh);
-    timerId_ = epicsTimerQueueCreateTimer(timerQ, timerCallbackC, this);
-
-    /* Connect to PhotonII */
+     
+    /* Connect to p2util running in procServ */
     status = pasynOctetSyncIO->connect(commandPort, 0, &pasynUserCommand_, NULL);
 
     /* Set some default values for parameters */
@@ -144,23 +123,11 @@ PhotonII::PhotonII(const char *portName, const char *commandPort,
                                 (EPICSTHREADFUNC)PhotonIITaskC,
                                 this) == NULL);
     if (status) {
-        printf("%s:%s epicsThreadCreate failure for image task\n", 
+        printf("%s::%s epicsThreadCreate failure for image task\n", 
             driverName, functionName);
         return;
     }
 
-    /* Create the thread that reads the status socket */
-/*    status = (epicsThreadCreate("PhotonIIStatusTask",
-                                epicsThreadPriorityMedium,
-                                epicsThreadGetStackSize(epicsThreadStackMedium),
-                                (EPICSTHREADFUNC)statusTaskC,
-                                this) == NULL);
-    if (status) {
-        printf("%s:%s epicsThreadCreate failure for status task\n", 
-            driverName, functionName);
-        return;
-    }
-*/
 }
 
 /** This function reads RAW files that PhotonII creates.  
@@ -178,18 +145,19 @@ asynStatus PhotonII::readRaw(const char *fileName, epicsTimeStamp *pStartTime, d
     double deltaTime;
     int status=-1;
     size_t nBytes;
+    size_t expectedSize = detSizeX_ * detSizeY_ * sizeof(epicsInt32);
     epicsUInt32 *pData = (epicsUInt32 *)pImage->pData;
     static const char *functionName = "readRaw";
         
     deltaTime = 0.;
-    if (pStartTime) epicsTimeToTime_t(&acqStartTime, pStartTime);
+    epicsTimeToTime_t(&acqStartTime, pStartTime);
     epicsTimeGetCurrent(&tStart);
     
     while (deltaTime <= timeout) {
         file = fopen(fileName, "rb");
-        if (file && (timeout != 0.)) {
+        if (file) {
             fileExists = 1;
-            /* The file exists.  Make sure it is a new file, not an old one. */
+            /* The file exists.  Make sure it is a new file, not an old one and that it is the correct size */
             status = stat(fileName, &statBuff);
             if (status){
                 asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
@@ -198,15 +166,16 @@ asynStatus PhotonII::readRaw(const char *fileName, epicsTimeStamp *pStartTime, d
                 fclose(file);
                 return(asynError);
             }
-            /* We allow up to 10 second clock skew between time on machine running this IOC
-             * and the machine with the file system returning modification time */
-            if (difftime(statBuff.st_mtime, acqStartTime) > -10) break;
+            if ((statBuff.st_size == expectedSize) &&
+                (difftime(statBuff.st_mtime, acqStartTime) >= 0)) {
+                break;
+            }
             fclose(file);
             file = NULL;
         }
         /* Sleep, but check for stop event, which can be used to abort a long acquisition */
         unlock();
-        status = epicsEventWaitWithTimeout(stopEventId_, FILE_READ_DELAY);
+        status = epicsEventWaitWithTimeout(stopEventId_, PII_FILE_READ_DELAY);
         lock();
         if (status == epicsEventWaitOK) {
             return(asynError);
@@ -220,12 +189,12 @@ asynStatus PhotonII::readRaw(const char *fileName, epicsTimeStamp *pStartTime, d
             driverName, functionName, fileName);
         if (fileExists) {
             asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                "  file exists but is more than 10 seconds old, possible clock synchronization problem\n");
+                "  file exists but is either old or the wrong size\n");
         } 
         return(asynError);
     }
-    nBytes = fread(pData, sizeof(epicsInt32), detSizeX_*detSizeY_, file);
-    if (nBytes != detSizeX_*detSizeY_*sizeof(epicsInt32)) {
+    nBytes = fread(pData, 1, expectedSize, file);
+    if (nBytes != expectedSize) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s::%s wrong number of bytes read from file %s = %d\n",
             driverName, functionName, fileName, (int)nBytes);
@@ -247,7 +216,7 @@ asynStatus PhotonII::writePhotonII(double timeout)
                                          timeout, &nwrite, &nread, &eomReason);
                                                                                  
     if (status) asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                    "%s:%s, status=%d, sent\n%s\n",
+                    "%s::%s, status=%d, sent\n%s\n",
                     driverName, functionName, status, toPhotonII_);
 
     /* Set output string so it can get back to EPICS */
@@ -269,7 +238,7 @@ asynStatus PhotonII::readPhotonII(double timeout)
                                     timeout, &nread, &eomReason);
                                                                                  
     if (status) asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                    "%s:%s, status=%d, sent\n%s\n",
+                    "%s::%s, status=%d, sent\n%s\n",
                     driverName, functionName, status, toPhotonII_);
 
     /* Set output string so it can get back to EPICS */
@@ -279,62 +248,6 @@ asynStatus PhotonII::readPhotonII(double timeout)
 }
 
 
-/** This thread reads status strings from the status socket, makes the string available to EPICS, and
-  * sends an event when it detects acquisition complete, etc. */
-void PhotonII::statusTask()
-{
-    int status = asynSuccess;
-    char response[MAX_MESSAGE_SIZE];
-    char *p;
-    double timeout=-1.0;
-    size_t nread;
-    int eomReason;
-    int acquire;
-    int framesize;
-    int open;
-    double temperature;
-
-    while(1) {
-        status = pasynOctetSyncIO->read(pasynUserCommand_, response,
-                                        sizeof(response), timeout,
-                                        &nread, &eomReason);
-        if (status == asynSuccess) {
-            this->lock();
-            setStringParam(PhotonIIStatus, response);
-            getIntegerParam(ADAcquire, &acquire);
-            if (strstr(response, "[INSTRUMENTQUEUE /PROCESSING=0]")) {
-                if (acquire) {
-                    epicsEventSignal(readoutEventId_);
-                }
-            } 
-            else if (strstr(response, "[CCDTEMPERATURE")) {
-                p = strstr(response, "DEGREESC=");
-                sscanf(p, "DEGREESC=%lf", &temperature);
-                setDoubleParam(ADTemperature, temperature);
-            }
-            else if (strstr(response, "[DETECTORSTATUS")) {
-                p = strstr(response, "FRAMESIZE=");
-                sscanf(p, "FRAMESIZE=%d", &framesize);
-                p = strstr(response, "CCDTEMP=");
-                sscanf(p, "CCDTEMP=%lf", &temperature);
-                setIntegerParam(ADSizeX, framesize);
-                setIntegerParam(ADSizeY, framesize);
-                setDoubleParam(ADTemperature, temperature);
-            }
-            else if (strstr(response, "[SHUTTERSTATUS")) {
-                p = strstr(response, "STATUS=");
-                sscanf(p, "STATUS=%d", &open);
-                setIntegerParam(ADShutterStatus, open);
-            }
-            callParamCallbacks();
-            /* Sleep a short while to allow EPICS record to process 
-             * before sending the next string */
-            epicsThreadSleep(0.01);
-            this->unlock();
-        }
-    }
-}
-
 /** This thread controls acquisition, reads SFRM files to get the image data, and
   * does the callbacks to send it to higher layers */
 void PhotonII::PhotonIITask()
@@ -343,19 +256,17 @@ void PhotonII::PhotonIITask()
     int imageCounter;
         int numImages, numImagesCounter;
     int imageMode;
-    int acquire;
     NDArray *pImage;
     double acquireTime, timeRemaining;
     ADShutterMode_t shutterMode;
     int frameType;
     int numDarks;
-    double readFileTimeout;
-    epicsTimeStamp startTime, currentTime;
+    epicsTimeStamp startTime;
     const char *functionName = "PhotonIITask";
     std::string fileName;
     std::string filePath;
     int fileNumber;
-    char fullFileName[MAX_FILENAME_LEN];
+    char fullFileName[PII_MAX_FILENAME_LEN];
     char statusMessage[MAX_MESSAGE_SIZE];
     char *pBuff;
     size_t dims[2];
@@ -373,7 +284,7 @@ void PhotonII::PhotonIITask()
         /* Release the lock while we wait for an event that says acquire has started, then lock again */
         this->unlock();
         asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, 
-            "%s:%s: waiting for acquire to start\n", driverName, functionName);
+            "%s::%s: waiting for acquire to start\n", driverName, functionName);
         status = epicsEventWait(startEventId_);
         this->lock();
         setIntegerParam(ADNumImagesCounter, 0);
@@ -387,9 +298,12 @@ void PhotonII::PhotonIITask()
         getIntegerParam(ADNumImages, &numImages);
         if (imageMode == ADImageSingle) numImages = 1;
         getIntegerParam(NDFileNumber, &fileNumber);
+        epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
+            "set --runnumber %d", fileNumber);
+        writePhotonII(PII_COMMAND_TIMEOUT);
         getStringParam(NDFilePath, filePath);
         getStringParam(NDFileName, fileName);
-        getDoubleParam(PhotonIIFileTimeout, &readFileTimeout);
+        createFileName(sizeof(fullFileName), fullFileName);
         
         setIntegerParam(ADStatus, ADStatusAcquire);
 
@@ -408,7 +322,7 @@ void PhotonII::PhotonIITask()
                 break;
         }
         /* Send the acquire command to PhotonII */
-        writePhotonII(PII_DEFAULT_TIMEOUT);
+        writePhotonII(PII_COMMAND_TIMEOUT);
 
         setStringParam(ADStatusMessage, "Waiting for Acquisition");
         callParamCallbacks();
@@ -423,12 +337,12 @@ void PhotonII::PhotonIITask()
         for (i=0; i<numImages; i++) {
 
             this->unlock();
-            status = readPhotonII(acquireTime + readFileTimeout);
+            status = readPhotonII(acquireTime + PII_FILE_READ_TIMEOUT);
             this->lock();
             /* If there was an error jump to bottom of loop */
             if (status != asynSuccess) {
                 asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                    "%s:%s: error waiting for file written message\n",
+                    "%s::%s: error waiting for file written message\n",
                     driverName, functionName);
                 goto done;
             }
@@ -446,7 +360,6 @@ void PhotonII::PhotonIITask()
                 getIntegerParam(ADSizeX, &itemp); dims[0] = itemp;
                 getIntegerParam(ADSizeY, &itemp); dims[1] = itemp;
                 pImage = this->pNDArrayPool->alloc(2, dims, NDInt32, 0, NULL);
-printf("Preparing to scan file name, fromPhotonII_ = %s\n", fromPhotonII_);
                 pBuff = strstr(fromPhotonII_, "bytes to ");
                 if (pBuff == 0) {
                     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
@@ -459,7 +372,7 @@ printf("Preparing to scan file name, fromPhotonII_ = %s\n", fromPhotonII_);
                 setStringParam(ADStatusMessage, statusMessage);
                 setStringParam(NDFullFileName, fullFileName);
                 callParamCallbacks();
-                status = readRaw(fullFileName, &startTime, acquireTime + readFileTimeout, pImage); 
+                status = readRaw(fullFileName, &startTime, acquireTime + PII_FILE_READ_TIMEOUT, pImage); 
                 /* If there was an error jump to bottom of loop */
                 if (status) {
                     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
@@ -483,7 +396,7 @@ printf("Preparing to scan file name, fromPhotonII_ = %s\n", fromPhotonII_);
                  * block on the plugin lock, and the plugin can be calling us */
                 this->unlock();
                 asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, 
-                     "%s:%s: calling NDArray callback\n", driverName, functionName);
+                     "%s::%s: calling NDArray callback\n", driverName, functionName);
                 doCallbacksGenericPointer(pImage, NDArrayData, 0);
                 this->lock();
                 /* Free the image buffer */
@@ -521,11 +434,6 @@ asynStatus PhotonII::writeInt32(asynUser *pasynUser, epicsInt32 value)
             /* This was a command to stop acquisition */
             epicsEventSignal(stopEventId_);
         }
-    }
-    else if (function == NDFileNumber) {
-        epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
-            "set --runnumber %d", value);
-        writePhotonII(PII_DEFAULT_TIMEOUT);
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < FIRST_PII_PARAM) status = ADDriver::writeInt32(pasynUser, value);
@@ -536,11 +444,11 @@ asynStatus PhotonII::writeInt32(asynUser *pasynUser, epicsInt32 value)
     
     if (status) 
         asynPrint(pasynUser, ASYN_TRACE_ERROR, 
-              "%s:%s: error, status=%d function=%d, value=%d\n", 
+              "%s::%s: error, status=%d function=%d, value=%d\n", 
               driverName, functionName, status, function, value);
     else        
         asynPrint(pasynUser, ASYN_TRACEIO_DRIVER, 
-              "%s:%s: function=%d, value=%d\n", 
+              "%s::%s: function=%d, value=%d\n", 
               driverName, functionName, function, value);
     return status;
 }
@@ -561,7 +469,7 @@ asynStatus PhotonII::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     if (function == ADAcquireTime) {
         epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
             "set --exposure-time %f", value);
-        writePhotonII(PII_DEFAULT_TIMEOUT);
+        writePhotonII(PII_COMMAND_TIMEOUT);
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < FIRST_PII_PARAM) status = ADDriver::writeFloat64(pasynUser, value);
@@ -572,11 +480,11 @@ asynStatus PhotonII::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     
     if (status) 
         asynPrint(pasynUser, ASYN_TRACE_ERROR, 
-              "%s:%s: error, status=%d function=%d, value=%f\n", 
+              "%s::%s: error, status=%d function=%d, value=%f\n", 
               driverName, functionName, status, function, value);
     else        
         asynPrint(pasynUser, ASYN_TRACEIO_DRIVER, 
-              "%s:%s: function=%d, value=%f\n", 
+              "%s::%s: function=%d, value=%f\n", 
               driverName, functionName, function, value);
     return status;
 }
@@ -604,14 +512,25 @@ void PhotonII::report(FILE *fp, int details)
     ADDriver::report(fp, details);
 }
 
+asynStatus PhotonII::p2util(const char *command)
+{
+    strncpy(toPhotonII_, command, sizeof(toPhotonII_));
+    return writePhotonII(PII_COMMAND_TIMEOUT);
+}
+
 extern "C" int PhotonIIConfig(const char *portName, const char *commandPort,
                                    int maxBuffers, size_t maxMemory,
                                    int priority, int stackSize)
 {
     new PhotonII(portName, commandPort, maxBuffers, maxMemory, priority, stackSize);
-    return(asynSuccess);
+    return asynSuccess;
 }
 
+extern "C" int p2util(const char *portName, const char *command)
+{
+    PhotonII *pPII = (PhotonII *)findAsynPortDriver(portName);
+    return pPII->p2util(command);
+}
 
 /* Code for iocsh registration */
 static const iocshArg PhotonIIConfigArg0 = {"Port name", iocshArgString};
@@ -633,13 +552,22 @@ static void configPhotonIICallFunc(const iocshArgBuf *args)
                    args[4].ival, args[5].ival);
 }
 
+static const iocshArg PhotonIIUtilArg0 = {"Port name", iocshArgString};
+static const iocshArg PhotonIIUtilArg1 = {"command", iocshArgString};
+static const iocshArg * const PhotonIIUtilArgs[] =    {&PhotonIIUtilArg0,
+                                                       &PhotonIIUtilArg1};
+static const iocshFuncDef PhotonIIUtil = {"p2util", 2, PhotonIIUtilArgs};
+static void PhotonIIUtilCallFunc(const iocshArgBuf *args)
+{
+    p2util(args[0].sval, args[1].sval);
+}
+
 static void PhotonIIRegister(void)
 {
-
     iocshRegister(&configPhotonII, configPhotonIICallFunc);
+    iocshRegister(&PhotonIIUtil, PhotonIIUtilCallFunc);
 }
 
 extern "C" {
 epicsExportRegistrar(PhotonIIRegister);
 }
-
