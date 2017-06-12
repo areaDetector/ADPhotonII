@@ -1,4 +1,3 @@
-$(P)$(R)ReadFileTimeout
 $(P)$(R)NumDarks
-file "ADBASE_settings.req", P=$(P), R=$(R)
+file "ADBase_settings.req", P=$(P), R=$(R)
 file "NDFile_settings.req", P=$(P), R=$(R)
