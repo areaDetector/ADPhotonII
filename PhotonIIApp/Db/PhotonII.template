@@ -4,28 +4,6 @@
 include "ADBase.template"
 include "NDFile.template"
 
-# Timeout waiting for reading data file.
-record(ao, "$(P)$(R)ReadFileTimeout")
-{
-    field(PINI, "YES")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_FILE_TIMEOUT")
-    field(DESC, "Timeout for Raw file")
-    field(VAL,  "30")
-    field(EGU,  "s")
-    field(PREC, "3")
-}
-
-# Status string from p2util
-record(waveform, "$(P)$(R)BISStatus")
-{
-    field(DTYP, "asynOctetRead")
-    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_STATUS")
-    field(FTVL, "CHAR")
-    field(NELM, "512")
-    field(SCAN, "I/O Intr")
-}
-
 # Number of dark fields
 record(longout, "$(P)$(R)NumDarks")
 {
