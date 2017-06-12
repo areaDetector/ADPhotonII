@@ -34,6 +34,7 @@ asynSetTraceMask("$(PII_SERVER)",0,9)
 asynSetTraceIOMask("$(PII_SERVER)",0,2)
 
 PhotonIIConfig("$(PORT)", "$(PII_SERVER)", 0, 0)
+p2util $(PORT) "load --commands --filename /home/bruker/p2util/scripts/prep_collection.cmd"
 dbLoadRecords("$(ADPHOTONII)/db/PhotonII.template","P=$(PREFIX),R=cam1:,PORT=$(PORT),ADDR=0,TIMEOUT=1,PII_SERVER_PORT=$(PII_SERVER)")
 
 # Create a standard arrays plugin
