@@ -13,11 +13,14 @@
 
 #include <ADDriver.h>
 
+#define DRIVER_VERSION      1
+#define DRIVER_REVISION     0
+#define DRIVER_MODIFICATION 0
+
 #define MAX_MESSAGE_SIZE 512 
 
 #define PhotonIINumDarksString     "PII_NUM_DARKS"
 #define PhotonIIStatusString       "PII_STATUS"
-#define PhotonIIFileTimeoutString   "PII_FILE_TIMEOUT"
 
 
 /** Driver for Bruker Photon II detector using their p2util server over TCP/IP socket */
@@ -31,16 +34,14 @@ public:
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
     virtual asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
     void report(FILE *fp, int details);
-    /* These are new methods */
-    void PhotonIITask();  /* This should be private but is called from C so must be public */
-    void statusTask(); /* This should be private but is called from C so must be public */
+    /* These are new methods.  These should be private but are called from C so must be public */
+    void PhotonIITask();  
+    asynStatus p2util(const char* command);
     epicsEventId stopEventId_;   /**< This should be private but is accessed from C, must be public */
  
  protected:
-    int PhotonIIFileTimeout;
-#define FIRST_PII_PARAM PhotonIIFileTimeout
     int PhotonIINumDarks;
-    int PhotonIIStatus;
+#define FIRST_PII_PARAM PhotonIINumDarks
 
  private:                                       
     /* These are the methods that are new to this class */
@@ -50,8 +51,6 @@ public:
        
     /* Our data */
     epicsEventId startEventId_;
-    epicsEventId readoutEventId_;
-    epicsTimerId timerId_;
     char toPhotonII_[MAX_MESSAGE_SIZE];
     char fromPhotonII_[MAX_MESSAGE_SIZE];
     asynUser *pasynUserCommand_;
