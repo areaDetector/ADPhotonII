@@ -35,11 +35,20 @@
 
 /** Frame type choices */
 typedef enum {
-    PhotonIIFrameNormal,
-    PhotonIIFrameDark,
-    PhotonIIFrameRaw,
-    PhotonIIFrameDoubleCorrelation
-} PhotonIIFrameType_t;
+    PII_FrameNormal,
+    PII_FrameDark,
+    PII_FrameADC0
+} PII_FrameType_t;
+
+typedef enum {
+    PII_TriggerRising,
+    PII_TriggerFalling
+} PII_TriggerEdge_t;
+
+typedef enum {
+    PII_TriggerStep,
+    PII_TriggerContinuous
+} PII_TriggerMode_t;
 
 #define PII_SIZEX 768
 #define PII_SIZEY 1024
@@ -47,7 +56,7 @@ typedef enum {
 #define PII_MAX_FILENAME_LEN 256
 /** Time between checking to see if raw file is complete */
 #define PII_FILE_READ_DELAY .01
-#define PII_FILE_READ_TIMEOUT 1.0 
+#define PII_FILE_READ_TIMEOUT 3.0 
 
 static const char *driverName = "PhotonII";
 
@@ -85,7 +94,11 @@ PhotonII::PhotonII(const char *portName, const char *commandPort,
     char versionString[20];
     const char *functionName = "PhotonII";
 
-    createParam(PhotonIINumDarksString,     asynParamInt32,   &PhotonIINumDarks);
+    createParam(PII_DRSumEnableString,     asynParamInt32,   &PII_DRSumEnable);
+    createParam(PII_DRSumThresholdString,  asynParamFloat64, &PII_DRSumThreshold);
+    createParam(PII_NumDarksString,        asynParamInt32,   &PII_NumDarks);
+    createParam(PII_TriggerTypeString,     asynParamInt32,   &PII_TriggerType);
+    createParam(PII_TriggerEdgeString,     asynParamInt32,   &PII_TriggerEdge);
 
     epicsSnprintf(versionString, sizeof(versionString), "%d.%d.%d", 
                   DRIVER_VERSION, DRIVER_REVISION, DRIVER_MODIFICATION);
@@ -311,12 +324,12 @@ void PhotonII::PhotonIITask()
         /* Call the callbacks to update any changes */
         callParamCallbacks();
         switch (frameType) {
-            case PhotonIIFrameNormal:
+            case PII_FrameNormal:
                 epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
                     "grab --dstdir %s --basename %s --count %d", filePath.c_str(), fileName.c_str(), numImages);
                 break;
-            case PhotonIIFrameDark:
-                getIntegerParam(PhotonIINumDarks, &numDarks);
+            case PII_FrameDark:
+                getIntegerParam(PII_NumDarks, &numDarks);
                 epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
                     "grab --darkframe --dstdir %s --basename %s --count %d", filePath.c_str(), fileName.c_str(), numDarks);
                 break;
@@ -336,16 +349,21 @@ void PhotonII::PhotonIITask()
         /* Wait for the frames to be written  */
         for (i=0; i<numImages; i++) {
 
-            this->unlock();
-            status = readPhotonII(acquireTime + PII_FILE_READ_TIMEOUT);
-            this->lock();
-            /* If there was an error jump to bottom of loop */
-            if (status != asynSuccess) {
-                asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                    "%s::%s: error waiting for file written message\n",
-                    driverName, functionName);
-                goto done;
+            // Read from p2util until we get a line containing the string "bytes to"
+            for (pBuff=0; pBuff==0;) {
+                this->unlock();
+                status = readPhotonII(acquireTime + PII_FILE_READ_TIMEOUT);
+                this->lock();
+                /* If there was an error jump to bottom of loop */
+                if (status != asynSuccess) {
+                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                        "%s::%s: error waiting for file written message\n",
+                        driverName, functionName);
+                    goto done;
+                }
+                pBuff = strstr(fromPhotonII_, "bytes to ");
             }
+            strcpy(fullFileName, pBuff + strlen("bytes to "));
             getIntegerParam(NDArrayCallbacks, &arrayCallbacks);
             getIntegerParam(NDArrayCounter, &imageCounter);
             imageCounter++;
@@ -355,19 +373,11 @@ void PhotonII::PhotonIITask()
             setIntegerParam(ADNumImagesCounter, numImagesCounter);
             callParamCallbacks();
     
-            if (arrayCallbacks && frameType != PhotonIIFrameDark) {
+            if (arrayCallbacks && frameType != PII_FrameDark) {
                 /* Get an image buffer from the pool */
                 getIntegerParam(ADSizeX, &itemp); dims[0] = itemp;
                 getIntegerParam(ADSizeY, &itemp); dims[1] = itemp;
                 pImage = this->pNDArrayPool->alloc(2, dims, NDInt32, 0, NULL);
-                pBuff = strstr(fromPhotonII_, "bytes to ");
-                if (pBuff == 0) {
-                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                        "%s::%s, unexpected response when looking for file name\n",
-                        driverName, functionName);
-                    goto done;
-                }
-                strcpy(fullFileName, pBuff + strlen("bytes to "));
                 epicsSnprintf(statusMessage, sizeof(statusMessage), "Reading from File %s", fullFileName);
                 setStringParam(ADStatusMessage, statusMessage);
                 setStringParam(NDFullFileName, fullFileName);
@@ -434,6 +444,27 @@ asynStatus PhotonII::writeInt32(asynUser *pasynUser, epicsInt32 value)
             /* This was a command to stop acquisition */
             epicsEventSignal(stopEventId_);
         }
+    
+    } else if (function == PII_DRSumEnable) {
+        epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
+            "set --dr-summation %d", value);
+        writePhotonII(PII_COMMAND_TIMEOUT);
+      
+    } else if (function == ADTriggerMode) {
+        epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
+            "set --frame-trigger-source %s", value==0 ? "internal" : "external");
+        writePhotonII(PII_COMMAND_TIMEOUT);
+      
+    } else if (function == PII_TriggerType) {
+        epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
+            "set --frame-trigger-mode %s", value==0 ? "step" : "continuous");
+        writePhotonII(PII_COMMAND_TIMEOUT);
+      
+    } else if (function == PII_TriggerEdge) {
+        epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
+            "set --frame-trigger-edge %s", value==0 ? "rising" : "falling");
+        writePhotonII(PII_COMMAND_TIMEOUT);
+      
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < FIRST_PII_PARAM) status = ADDriver::writeInt32(pasynUser, value);
@@ -470,6 +501,12 @@ asynStatus PhotonII::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
         epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
             "set --exposure-time %f", value);
         writePhotonII(PII_COMMAND_TIMEOUT);
+
+    } else if (function == PII_DRSumThreshold) {
+        epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
+            "set --dr-summation-threshold %f", value);
+        writePhotonII(PII_COMMAND_TIMEOUT);
+      
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < FIRST_PII_PARAM) status = ADDriver::writeFloat64(pasynUser, value);
