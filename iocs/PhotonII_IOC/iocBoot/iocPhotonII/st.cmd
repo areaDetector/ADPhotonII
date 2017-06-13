@@ -23,6 +23,7 @@ epicsEnvSet("EPICS_DB_INCLUDE_PATH", "$(ADCORE)/db")
 
 # The name of the drvAsynIPPort to communicate with p2util
 epicsEnvSet("PII_SERVER",   "PIIServer")
+epicsEnvSet("PII_STARTUP_SCRIPT", "/home/bruker/p2util/scripts/prep_collection.cmd")
 
 ###
 # Create the asyn port to talk to the p2util procServ port 20000
@@ -34,7 +35,7 @@ asynSetTraceMask("$(PII_SERVER)",0,9)
 asynSetTraceIOMask("$(PII_SERVER)",0,2)
 
 PhotonIIConfig("$(PORT)", "$(PII_SERVER)", 0, 0)
-p2util $(PORT) "load --commands --filename /home/bruker/p2util/scripts/prep_collection.cmd"
+p2util $(PORT) "load --commands --filename "$(PII_STARTUP_SCRIPT)
 dbLoadRecords("$(ADPHOTONII)/db/PhotonII.template","P=$(PREFIX),R=cam1:,PORT=$(PORT),ADDR=0,TIMEOUT=1,PII_SERVER_PORT=$(PII_SERVER)")
 
 # Create a standard arrays plugin
