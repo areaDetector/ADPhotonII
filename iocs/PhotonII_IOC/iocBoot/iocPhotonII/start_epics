@@ -1,3 +1,2 @@
-medm -x -macro "P=13MARCCD1:, R=cam1:" marCCD.adl &
-../../bin/linux-x86/marCCDApp st.cmd
-
+cd /corvette/home/epics/devel/areaDetector/ADPhotonII/iocs/PhotonII_IOC/iocBoot/iocPhotonII
+../../bin/linux-x86/PhotonIIApp st.cmd
