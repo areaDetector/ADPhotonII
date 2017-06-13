@@ -4,22 +4,6 @@
 include "ADBase.template"
 include "NDFile.template"
 
-# Number of dark fields
-record(longout, "$(P)$(R)NumDarks")
-{
-   field(PINI, "YES")
-   field(DTYP, "asynInt32")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_NUM_DARKS")
-   field(VAL,  "2")
-}
-
-record(longin, "$(P)$(R)NumDarks_RBV")
-{
-   field(DTYP, "asynInt32")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_NUM_DARKS")
-   field(SCAN, "I/O Intr")
-}
-
 
 # We replace the file format choices from ADBase.template
 record(mbbo, "$(P)$(R)FileFormat")
@@ -46,10 +30,8 @@ record(mbbo, "$(P)$(R)FrameType")
    field(ZRVL, "0")
    field(ONST, "Dark")
    field(ONVL, "1")
-   field(TWST, "Raw")
+   field(TWST, "ADC0")
    field(TWVL, "2")
-   field(THST, "DblCorrelation")
-   field(THVL, "3")
 }
 
 record(mbbi, "$(P)$(R)FrameType_RBV")
@@ -58,10 +40,8 @@ record(mbbi, "$(P)$(R)FrameType_RBV")
    field(ZRVL, "0")
    field(ONST, "Dark")
    field(ONVL, "1")
-   field(TWST, "Raw")
+   field(TWST, "ADC0")
    field(TWVL, "2")
-   field(THST, "DblCorrelation")
-   field(THVL, "3")
    field(SCAN, "I/O Intr")
 }
 
@@ -69,6 +49,99 @@ record(mbbi, "$(P)$(R)FrameType_RBV")
 record(ai, "$(P)$(R)TimeRemaining_RBV")
 {
    field(PREC, "2")
+}
+
+# Number of dark fields
+record(longout, "$(P)$(R)NumDarks")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_NUM_DARKS")
+   field(VAL,  "2")
+}
+
+record(longin, "$(P)$(R)NumDarks_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_NUM_DARKS")
+   field(SCAN, "I/O Intr")
+}
+
+
+# Trigger type (step/continuous)
+record(bo, "$(P)$(R)TriggerType")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_TRIGGER_TYPE")
+   field(ZNAM, "Step")
+   field(ONAM, "Continuous")
+}
+
+record(bi, "$(P)$(R)TriggerType_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_TRIGGER_TYPE")
+   field(ZNAM, "Step")
+   field(ONAM, "Continuous")
+   field(SCAN, "I/O Intr")
+}
+
+# Trigger edge (rising/falling)
+record(bo, "$(P)$(R)TriggerEdge")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_TRIGGER_EDGE")
+   field(ZNAM, "Rising")
+   field(ONAM, "Falling")
+}
+
+record(bi, "$(P)$(R)TriggerEdge_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_TRIGGER_EDGE")
+   field(ZNAM, "Rising")
+   field(ONAM, "Falling")
+   field(SCAN, "I/O Intr")
+}
+
+# DR Summation mode enable
+record(bo, "$(P)$(R)DRSumEnable")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_DRSUM_ENABLE")
+   field(ZNAM, "Disable")
+   field(ONAM, "Enable")
+}
+
+record(bi, "$(P)$(R)DRSumEnable_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_DRSUM_ENABLE")
+   field(ZNAM, "Disable")
+   field(ONAM, "Enable")
+   field(SCAN, "I/O Intr")
+}
+
+# DR Summation threshold
+record(ao, "$(P)$(R)DRSumThreshold")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynFloat64")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_DRSUM_THRESHOLD")
+   field(VAL,  "1")
+   field(PREC, "2")
+}
+
+# DR Summation threshold
+record(ai, "$(P)$(R)DRSumThreshold_RBV")
+{
+   field(DTYP, "asynFloat64")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_DRSUM_THRESHOLD")
+   field(PREC, "2")
+   field(SCAN, "I/O Intr")
 }
 
 # asyn record for interactive communication with p2util
