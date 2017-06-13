@@ -19,8 +19,11 @@
 
 #define MAX_MESSAGE_SIZE 512 
 
-#define PhotonIINumDarksString     "PII_NUM_DARKS"
-#define PhotonIIStatusString       "PII_STATUS"
+#define PII_DRSumEnableString     "PII_DRSUM_ENABLE"
+#define PII_DRSumThresholdString  "PII_DRSUM_THRESHOLD"
+#define PII_NumDarksString        "PII_NUM_DARKS"
+#define PII_TriggerTypeString     "PII_TRIGGER_TYPE"
+#define PII_TriggerEdgeString     "PII_TRIGGER_EDGE"
 
 
 /** Driver for Bruker Photon II detector using their p2util server over TCP/IP socket */
@@ -40,8 +43,12 @@ public:
     epicsEventId stopEventId_;   /**< This should be private but is accessed from C, must be public */
  
  protected:
-    int PhotonIINumDarks;
-#define FIRST_PII_PARAM PhotonIINumDarks
+    int PII_DRSumEnable;
+#define FIRST_PII_PARAM PII_DRSumEnable
+    int PII_DRSumThreshold;
+    int PII_NumDarks;
+    int PII_TriggerType;
+    int PII_TriggerEdge;
 
  private:                                       
     /* These are the methods that are new to this class */
