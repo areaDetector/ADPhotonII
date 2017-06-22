@@ -20,7 +20,6 @@
 #define MAX_MESSAGE_SIZE 512 
 
 #define PII_DRSumEnableString     "PII_DRSUM_ENABLE"
-#define PII_DRSumThresholdString  "PII_DRSUM_THRESHOLD"
 #define PII_NumDarksString        "PII_NUM_DARKS"
 #define PII_TriggerTypeString     "PII_TRIGGER_TYPE"
 #define PII_TriggerEdgeString     "PII_TRIGGER_EDGE"
@@ -45,7 +44,6 @@ public:
  protected:
     int PII_DRSumEnable;
 #define FIRST_PII_PARAM PII_DRSumEnable
-    int PII_DRSumThreshold;
     int PII_NumDarks;
     int PII_TriggerType;
     int PII_TriggerEdge;
