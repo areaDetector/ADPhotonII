@@ -95,7 +95,6 @@ PhotonII::PhotonII(const char *portName, const char *commandPort,
     const char *functionName = "PhotonII";
 
     createParam(PII_DRSumEnableString,     asynParamInt32,   &PII_DRSumEnable);
-    createParam(PII_DRSumThresholdString,  asynParamFloat64, &PII_DRSumThreshold);
     createParam(PII_NumDarksString,        asynParamInt32,   &PII_NumDarks);
     createParam(PII_TriggerTypeString,     asynParamInt32,   &PII_TriggerType);
     createParam(PII_TriggerEdgeString,     asynParamInt32,   &PII_TriggerEdge);
@@ -179,7 +178,7 @@ asynStatus PhotonII::readRaw(const char *fileName, epicsTimeStamp *pStartTime, d
                 fclose(file);
                 return(asynError);
             }
-            if ((statBuff.st_size == expectedSize) &&
+            if (((size_t)statBuff.st_size == expectedSize) &&
                 (difftime(statBuff.st_mtime, acqStartTime) >= 0)) {
                 break;
             }
@@ -270,7 +269,7 @@ void PhotonII::PhotonIITask()
         int numImages, numImagesCounter;
     int imageMode;
     NDArray *pImage;
-    double acquireTime, timeRemaining;
+    double acquireTime;
     ADShutterMode_t shutterMode;
     int frameType;
     int numDarks;
@@ -339,9 +338,7 @@ void PhotonII::PhotonIITask()
 
         setStringParam(ADStatusMessage, "Waiting for Acquisition");
         callParamCallbacks();
-        /* Set the the start time for the TimeRemaining counter */
         epicsTimeGetCurrent(&startTime);
-        timeRemaining = acquireTime * numImages;
 
         /* If we are using the EPICS shutter then tell it to open */
         if (shutterMode == ADShutterModeEPICS) ADDriver::setShutter(1);
@@ -502,11 +499,6 @@ asynStatus PhotonII::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
             "set --exposure-time %f", value);
         writePhotonII(PII_COMMAND_TIMEOUT);
 
-    } else if (function == PII_DRSumThreshold) {
-        epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
-            "set --dr-summation-threshold %f", value);
-        writePhotonII(PII_COMMAND_TIMEOUT);
-      
     } else {
         /* If this parameter belongs to a base class call its method */
         if (function < FIRST_PII_PARAM) status = ADDriver::writeFloat64(pasynUser, value);
