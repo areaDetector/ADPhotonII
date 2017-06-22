@@ -45,12 +45,6 @@ record(mbbi, "$(P)$(R)FrameType_RBV")
    field(SCAN, "I/O Intr")
 }
 
-# Change the PREC of the time remaining record to 2
-record(ai, "$(P)$(R)TimeRemaining_RBV")
-{
-   field(PREC, "2")
-}
-
 # Number of dark fields
 record(longout, "$(P)$(R)NumDarks")
 {
@@ -122,25 +116,6 @@ record(bi, "$(P)$(R)DRSumEnable_RBV")
    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_DRSUM_ENABLE")
    field(ZNAM, "Disable")
    field(ONAM, "Enable")
-   field(SCAN, "I/O Intr")
-}
-
-# DR Summation threshold
-record(ao, "$(P)$(R)DRSumThreshold")
-{
-   field(PINI, "YES")
-   field(DTYP, "asynFloat64")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_DRSUM_THRESHOLD")
-   field(VAL,  "1")
-   field(PREC, "2")
-}
-
-# DR Summation threshold
-record(ai, "$(P)$(R)DRSumThreshold_RBV")
-{
-   field(DTYP, "asynFloat64")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_DRSUM_THRESHOLD")
-   field(PREC, "2")
    field(SCAN, "I/O Intr")
 }
 
