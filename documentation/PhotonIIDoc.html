@@ -260,12 +260,21 @@
   <h2 id="Configuration">
     Configuration</h2>
   <p>
+    Prior to starting the EPICS IOC the p2util program must be started under procServ
+    as described above.</p>
+  <p>
     The Photon II driver is created with the PhotonIIConfig command, either from C/C++
     or from the EPICS IOC shell.</p>
   <pre>int PhotonIIConfig(const char *portName, const char *commandPort,
                  int maxBuffers, size_t maxMemory,
                  int priority, int stackSize)
   </pre>
+  <p>
+    For details on the meaning of the parameters to this function refer to the detailed
+    documentation on the PhotonIIConfig function in the <a href="areaDetectorDoxygenHTML/_photon_i_i_8cpp.html">
+      PhotonII.cpp documentation</a> and in the documentation for the constructor for
+    the <a href="areaDetectorDoxygenHTML/classphoton_i_i.html">PhotonII class</a>.
+  </p>
   <p>
     The Photon II driver defines an additional iocsh command which is used to pass p2util
     commands directly from the iocsh shell.</p>
@@ -274,24 +283,22 @@
   <p>
     The <code>portName</code> argument is the name of the PhotonII port created with
     the drvAsynIPPortConfigure command previously in the startup script. The <code>command</code>
-    argument is the p2util command to execute. This command is typically used to send
-    the command to load an initilization script (e.g. prep_collection.cmd) to p2util
-    right after the PhotonIIConfig command. This ensures that p2util is in a known state
-    before starting the IOC.</p>
+    argument is the p2util command to execute. If the command contains any spaces, which
+    it typically will, then the entire command must be enclosed in quotes. This command
+    is typically used to send the command to load an initilization script (e.g. prep_collection.cmd)
+    to p2util right after the PhotonIIConfig command. This ensures that p2util is in
+    a known state before starting the IOC. This is an example:</p>
+  <pre>
+p2util("PII", "load --commands --filename "/home/bruker/p2util/scripts/prep_collection.cmd")
+    </pre>
   <p>
-    For details on the meaning of the parameters to this function refer to the detailed
-    documentation on the PhotonIIConfig function in the <a href="areaDetectorDoxygenHTML/_photon_i_i_8cpp.html">
-      PhotonII.cpp documentation</a> and in the documentation for the constructor for
-    the <a href="areaDetectorDoxygenHTML/classphoton_i_i.html">PhotonII class</a>.
-  </p>
-  <p>
-    There an example IOC boot directory and startup script (<a href="Photon II_st_cmd.html">iocBoot/iocPhotonII/st.cmd)</a>
+    There an example IOC boot directory and startup script (<a href="photonii_st_cmd.html">iocBoot/iocPhotonII/st.cmd)</a>
     provided with areaDetector.
   </p>
   <h2 id="MEDM_screens" style="text-align: left">
     MEDM screens</h2>
   <p>
-    The following show the MEDM screen that is used to control the Photon II detector.
+    The following is the MEDM screen that is used to control the Photon II detector.
     Note that the general purpose screen ADBase.adl can be used, but it exposes many
     controls that are not applicable to the Photon II, and lacks some fields that are
     important for the Photon II.</p>
@@ -299,7 +306,7 @@
     <code>PhotonII.adl</code> is the screen used to control the Photon II driver.
   </p>
   <div style="text-align: center">
-    <h3 style="text-align: center">
+    <h3>
       PhotonII.adl</h3>
     <img alt="PhotonII.png" src="PhotonII.png" /></div>
   <h2 id="Restrictions">
