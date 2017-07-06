@@ -98,6 +98,9 @@ PhotonII::PhotonII(const char *portName, const char *commandPort,
     createParam(PII_NumDarksString,        asynParamInt32,   &PII_NumDarks);
     createParam(PII_TriggerTypeString,     asynParamInt32,   &PII_TriggerType);
     createParam(PII_TriggerEdgeString,     asynParamInt32,   &PII_TriggerEdge);
+    createParam(PII_AcquireModeString,     asynParamInt32,   &PII_AcquireMode);
+    createParam(PII_NumSubFramesString,    asynParamInt32,   &PII_NumSubFrames);
+    createParam(PII_NumSubSubFramesString, asynParamInt32,   &PII_NumSubSubFrames);
 
     epicsSnprintf(versionString, sizeof(versionString), "%d.%d.%d", 
                   DRIVER_VERSION, DRIVER_REVISION, DRIVER_MODIFICATION);
@@ -460,6 +463,21 @@ asynStatus PhotonII::writeInt32(asynUser *pasynUser, epicsInt32 value)
     } else if (function == PII_TriggerEdge) {
         epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
             "set --frame-trigger-edge %s", value==0 ? "rising" : "falling");
+        writePhotonII(PII_COMMAND_TIMEOUT);
+      
+    } else if (function == PII_AcquireMode) {
+        epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
+            "set --acquisition-mode-%s", value==0 ? "auto" : "manual");
+        writePhotonII(PII_COMMAND_TIMEOUT);
+      
+    } else if (function == PII_NumSubFrames) {
+        epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
+            "set --subframes-per-frame %d", value);
+        writePhotonII(PII_COMMAND_TIMEOUT);
+      
+    } else if (function == PII_NumSubSubFrames) {
+        epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
+            "set --subsubframes-per-subframe %d", value);
         writePhotonII(PII_COMMAND_TIMEOUT);
       
     } else {
