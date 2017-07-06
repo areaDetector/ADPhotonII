@@ -4,3 +4,6 @@ $(P)$(R)DRSumEnable
 $(P)$(R)NumDarks
 $(P)$(R)TriggerType
 $(P)$(R)TriggerEdge
+$(P)$(R)AcquireMode
+$(P)$(R)NumSubFrames
+$(P)$(R)NumSubSubFrames
