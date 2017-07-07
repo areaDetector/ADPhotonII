@@ -252,9 +252,11 @@ asynStatus PhotonII::readPhotonII(double timeout)
                                     fromPhotonII_, sizeof(fromPhotonII_), 
                                     timeout, &nread, &eomReason);
                                                                                  
-    if (status) asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                    "%s::%s, status=%d, sent\n%s\n",
-                    driverName, functionName, status, toPhotonII_);
+    if (status && status != asynTimeout) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+            "%s::%s, status=%d\n",
+            driverName, functionName, status);
+    }
 
     /* Set output string so it can get back to EPICS */
     setStringParam(ADStringFromServer, fromPhotonII_);
@@ -273,6 +275,8 @@ void PhotonII::PhotonIITask()
     int imageMode;
     NDArray *pImage;
     double acquireTime;
+    double expectedTime;
+    double timeRemaining;
     ADShutterMode_t shutterMode;
     int frameType;
     int numDarks;
@@ -342,26 +346,54 @@ void PhotonII::PhotonIITask()
         setStringParam(ADStatusMessage, "Waiting for Acquisition");
         callParamCallbacks();
         epicsTimeGetCurrent(&startTime);
+        expectedTime = numImages * acquireTime;
 
         /* If we are using the EPICS shutter then tell it to open */
         if (shutterMode == ADShutterModeEPICS) ADDriver::setShutter(1);
 
         /* Wait for the frames to be written  */
         for (i=0; i<numImages; i++) {
-
+            epicsTimeStamp pollStart, pollCheck;
+            double deltaTime;
             // Read from p2util until we get a line containing the string "bytes to"
-            for (pBuff=0; pBuff==0;) {
+            // Poll so we can abort
+            epicsTimeGetCurrent(&pollStart);
+            while(1) {
+                // Update the remaining time
+                epicsTimeGetCurrent(&pollCheck);
+                timeRemaining = expectedTime - epicsTimeDiffInSeconds(&pollCheck, &startTime);
+                setDoubleParam(ADTimeRemaining, timeRemaining);
+                callParamCallbacks();
                 this->unlock();
-                status = readPhotonII(acquireTime + PII_FILE_READ_TIMEOUT);
+                status = readPhotonII(PII_FILE_READ_DELAY);
                 this->lock();
-                /* If there was an error jump to bottom of loop */
-                if (status != asynSuccess) {
+                if (status == asynSuccess) {
+                    pBuff = strstr(fromPhotonII_, "bytes to ");
+                    if (pBuff) break;
+                } else if (status == asynTimeout) {
+                    continue;
+                } else {
                     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                        "%s::%s: error waiting for file written message\n",
-                        driverName, functionName);
+                        "%s::%s: error reading file written message status=%d\n",
+                        driverName, functionName, status);
                     goto done;
                 }
-                pBuff = strstr(fromPhotonII_, "bytes to ");
+                /* Sleep, but check for stop event, which can be used to abort a long acquisition */
+                unlock();
+                status = epicsEventWaitWithTimeout(stopEventId_, PII_FILE_READ_DELAY);
+                lock();
+                if (status == epicsEventWaitOK) {
+                    goto done;
+                }
+                epicsTimeGetCurrent(&pollCheck);
+                deltaTime = epicsTimeDiffInSeconds(&pollCheck, &pollStart);
+                if (deltaTime > acquireTime + PII_FILE_READ_TIMEOUT) {
+                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                        "%s::%s: timeout waiting for file written message\n",
+                        driverName, functionName);
+                    goto done;
+                    
+                }
             }
             strcpy(fullFileName, pBuff + strlen("bytes to "));
             getIntegerParam(NDArrayCallbacks, &arrayCallbacks);
@@ -413,9 +445,10 @@ void PhotonII::PhotonIITask()
                 pImage->release();
             }
         }
-        setIntegerParam(ADAcquire, 0);
-        if (shutterMode == ADShutterModeEPICS) ADDriver::setShutter(0);
         done:
+        setIntegerParam(ADAcquire, 0);
+        setDoubleParam(ADTimeRemaining, 0);
+        if (shutterMode == ADShutterModeEPICS) ADDriver::setShutter(0);
         callParamCallbacks();
     }
 }
@@ -428,21 +461,25 @@ void PhotonII::PhotonIITask()
 asynStatus PhotonII::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
     int function = pasynUser->reason;
-    int adstatus;
+    int acquiring;
     asynStatus status = asynSuccess;
     const char *functionName = "writeInt32";
 
+    // Get the current acquiring status before setting value in parameter library
+    getIntegerParam(ADAcquire, &acquiring);
     status = setIntegerParam(function, value);
 
     if (function == ADAcquire) {
-        getIntegerParam(ADStatus, &adstatus);
-        if (value && (adstatus == ADStatusIdle)) {
+        if (value && (!acquiring)) {
             /* Send an event to wake up the PhotonII task.  */
             epicsEventSignal(startEventId_);
         } 
-        if (!value && (adstatus != ADStatusIdle)) {
+        if (!value && acquiring) {
             /* This was a command to stop acquisition */
             epicsEventSignal(stopEventId_);
+            epicsSnprintf(toPhotonII_, sizeof(toPhotonII_), 
+                "abort");
+            writePhotonII(PII_COMMAND_TIMEOUT);
         }
     
     } else if (function == PII_DRSumEnable) {
