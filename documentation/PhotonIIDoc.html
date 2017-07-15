@@ -223,6 +223,34 @@
           bi</td>
       </tr>
       <tr>
+        <td>
+          PII_NumSubFrames</td>
+        <td>
+          asynInt32</td>
+        <td>
+          r/w</td>
+        <td>
+          Number of sub-frames per frame. Increasing this number reduces the chance that a
+          sub-frame will have saturated pixels. However, this comes at the expense of increased
+          read noise. Thus it is generally best to set this number to the smallest value that
+          will not result in any saturated pixels. In NDR mode each subframe requires a minimum
+          of 1 non-destructive reads and 1 destructive read per subframe. The minimum time
+          per subframe is 28.5 ms. Thus, if the exposure time is 1 second the maximum number
+          of sub-frames is 35, and if the exposure time is 2 seconds it is 70 subframes. In
+          practice we observe data read errors from p2util when these values are used, but
+          33 subframes in 1 second and 62 subframes in 2 seconds appears to work.<br />
+          Note that this driver always runs p2util in auto mode, so the number of sub-sub-frames
+          per sub-frame is set automatically by p2util. </td>
+        <td>
+          PII_NUM_SUBFRAMES</td>
+        <td>
+          $(P)$(R)NumSubFrames<br />
+          $(P)$(R)NumSubFrames_RBV</td>
+        <td>
+          longout<br />
+          longin</td>
+      </tr>
+      <tr>
         <td align="center" colspan="7">
           <b>Debugging</b></td>
       </tr>
@@ -327,10 +355,6 @@ load --filename average_adc0_001500.raw --adc0
       restriction prevents running the Photon II at frame rates between 10 and 70 Hz,
       which is the fastest frame rate that the Photon II hardware can do. Bruker plans
       to fix this problem.</li>
-    <li>The driver currently does not provide access to the subframes-per-frame parameter
-      in p2util. This may be added in the future to allow NDR Integration mode to be used
-      down to about 0.05 seconds, assuming that the 0.1 second limitation in p2util is
-      fixed.</li>
     <li>The driver does not currently implement FrameType=Dark or ADC0. This means that
       the detector dark current and ADC0 values must have been previously measured, typically
       using the calibrate.sh script provided by Bruker. That script takes about 90 minutes
