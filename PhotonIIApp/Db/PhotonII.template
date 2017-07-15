@@ -119,25 +119,6 @@ record(bi, "$(P)$(R)DRSumEnable_RBV")
    field(SCAN, "I/O Intr")
 }
 
-# Acquire mode
-record(bo, "$(P)$(R)AcquireMode")
-{
-   field(PINI, "YES")
-   field(DTYP, "asynInt32")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_ACQUIRE_MODE")
-   field(ZNAM, "Auto")
-   field(ONAM, "Manual")
-}
-
-record(bi, "$(P)$(R)AcquireMode_RBV")
-{
-   field(DTYP, "asynInt32")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_ACQUIRE_MODE")
-   field(ZNAM, "Auto")
-   field(ONAM, "Manual")
-   field(SCAN, "I/O Intr")
-}
-
 # Number of subframes per frame
 record(longout, "$(P)$(R)NumSubFrames")
 {
@@ -153,23 +134,6 @@ record(longin, "$(P)$(R)NumSubFrames_RBV")
    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_NUM_SUBFRAMES")
    field(SCAN, "I/O Intr")
 }
-
-# Number of subsubframes per subframe
-record(longout, "$(P)$(R)NumSubSubFrames")
-{
-   field(PINI, "YES")
-   field(DTYP, "asynInt32")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_NUM_SUBSUBFRAMES")
-   field(VAL,  "10")
-}
-
-record(longin, "$(P)$(R)NumSubSubFrames_RBV")
-{
-   field(DTYP, "asynInt32")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PII_NUM_SUBSUBFRAMES")
-   field(SCAN, "I/O Intr")
-}
-
 
 # asyn record for interactive communication with p2util
 record(asyn, "$(P)$(R)PIIAsyn")
