@@ -17,7 +17,7 @@
 #define DRIVER_REVISION     0
 #define DRIVER_MODIFICATION 0
 
-#define MAX_MESSAGE_SIZE 512 
+#define PII_MAX_MESSAGE_SIZE 512 
 
 #define PII_DRSumEnableString     "PII_DRSUM_ENABLE"
 #define PII_NumDarksString        "PII_NUM_DARKS"
@@ -58,8 +58,8 @@ public:
        
     /* Our data */
     epicsEventId startEventId_;
-    char toPhotonII_[MAX_MESSAGE_SIZE];
-    char fromPhotonII_[MAX_MESSAGE_SIZE];
+    char toPhotonII_[PII_MAX_MESSAGE_SIZE];
+    char fromPhotonII_[PII_MAX_MESSAGE_SIZE];
     asynUser *pasynUserCommand_;
     int detSizeX_;
     int detSizeY_;

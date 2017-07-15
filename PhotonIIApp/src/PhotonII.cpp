@@ -284,7 +284,7 @@ void PhotonII::PhotonIITask()
     std::string filePath;
     int fileNumber;
     char fullFileName[PII_MAX_FILENAME_LEN];
-    char statusMessage[MAX_MESSAGE_SIZE];
+    char statusMessage[PII_MAX_MESSAGE_SIZE];
     char *pBuff;
     size_t dims[2];
     int itemp;
