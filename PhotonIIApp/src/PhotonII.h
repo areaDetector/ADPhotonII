@@ -23,9 +23,7 @@
 #define PII_NumDarksString        "PII_NUM_DARKS"
 #define PII_TriggerTypeString     "PII_TRIGGER_TYPE"
 #define PII_TriggerEdgeString     "PII_TRIGGER_EDGE"
-#define PII_AcquireModeString     "PII_ACQUIRE_MODE"
 #define PII_NumSubFramesString    "PII_NUM_SUBFRAMES"
-#define PII_NumSubSubFramesString "PII_NUM_SUBSUBFRAMES"
 
 
 /** Driver for Bruker Photon II detector using their p2util server over TCP/IP socket */
@@ -50,9 +48,7 @@ public:
     int PII_NumDarks;
     int PII_TriggerType;
     int PII_TriggerEdge;
-    int PII_AcquireMode;
     int PII_NumSubFrames;
-    int PII_NumSubSubFrames;
 
  private:                                       
     /* These are the methods that are new to this class */
