@@ -10,7 +10,7 @@
     <h1>
       areaDetector Photon II driver</h1>
     <h2>
-      June 22, 2017</h2>
+      July 15, 2017</h2>
     <h2>
       Mark Rivers</h2>
     <h2>
@@ -234,11 +234,12 @@
           sub-frame will have saturated pixels. However, this comes at the expense of increased
           read noise. Thus it is generally best to set this number to the smallest value that
           will not result in any saturated pixels. In NDR mode each subframe requires a minimum
-          of 1 non-destructive reads and 1 destructive read per subframe. The minimum time
-          per subframe is 28.5 ms. Thus, if the exposure time is 1 second the maximum number
-          of sub-frames is 35, and if the exposure time is 2 seconds it is 70 subframes. In
-          practice we observe data read errors from p2util when these values are used, but
-          33 subframes in 1 second and 62 subframes in 2 seconds appears to work.<br />
+          of 1 non-destructive read and 1 destructive read per subframe. The minimum time
+          per subframe is thus 1/(2*70)=28.5 ms. So if the exposure time is 1 second the maximum
+          number of sub-frames/frame is 35, and if the exposure time is 2 seconds it is 70
+          sub-frames/frame. In practice we observe data read errors from p2util when these
+          values are used, but 33 subframes in 1 second and 62 subframes in 2 seconds appears
+          to work.<br />
           Note that this driver always runs p2util in auto mode, so the number of sub-sub-frames
           per sub-frame is set automatically by p2util. </td>
         <td>
@@ -365,11 +366,11 @@ load --filename average_adc0_001500.raw --adc0
     <li>The following items are hardcoded in the driver. They can be changed by recompiling
       compiling if necessary.
       <ul>
-        <li>MAX_MESSAGE_SIZE=512 The maximum size of message to/from Photon II_socket_server.</li>
-        <li>MAX_FILENAME_LEN=256 The maximum size of a complete file name including path and
+        <li>PII_MAX_MESSAGE_SIZE=512 The maximum size of message to/from Photon II_socket_server.</li>
+        <li>PII_MAX_FILENAME_LEN=256 The maximum size of a complete file name including path and
           extension.</li>
         <li>PII_COMMAND_TIMEOUT=1.0 Timeout when communicating with Photon II_socket_server.</li>
-        <li>FILE_READ_DELAY=.01 seconds. The time between polling to see if the RAW file exists
+        <li>PII_FILE_READ_DELAY=.01 seconds. The time between polling to see if the RAW file exists
           or if it is the expected size.</li>
         <li>PII_FILE_READ_TIMEOUT=3.0 seconds. The timeout to wait for the RAW file to appear.
           This value is added to the AcquireTime to determine the actual timeout.</li>
