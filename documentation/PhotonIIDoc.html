@@ -151,11 +151,7 @@
         <td>
           Flag to control whether the DR Summation mode is enabled. If it is enabled then
           p2util will change from NDR Integration mode to DR Summation mode when the AcquireTime
-          is 1.0 seconds or less. The minimum AcquireTime in NDR Integration mode is
-          <pre>
-          3 frames * 10 subframes/frame / 70 frames/s = 0.429 seconds
-          </pre>
-          or about 0.5 seconds.</td>
+          is 1.0 seconds or less.</td>
         <td>
           PII_DRSUM_ENABLE</td>
         <td>
@@ -367,11 +363,11 @@ load --filename average_adc0_001500.raw --adc0
       compiling if necessary.
       <ul>
         <li>PII_MAX_MESSAGE_SIZE=512 The maximum size of message to/from Photon II_socket_server.</li>
-        <li>PII_MAX_FILENAME_LEN=256 The maximum size of a complete file name including path and
-          extension.</li>
+        <li>PII_MAX_FILENAME_LEN=256 The maximum size of a complete file name including path
+          and extension.</li>
         <li>PII_COMMAND_TIMEOUT=1.0 Timeout when communicating with Photon II_socket_server.</li>
-        <li>PII_FILE_READ_DELAY=.01 seconds. The time between polling to see if the RAW file exists
-          or if it is the expected size.</li>
+        <li>PII_FILE_READ_DELAY=.01 seconds. The time between polling to see if the RAW file
+          exists or if it is the expected size.</li>
         <li>PII_FILE_READ_TIMEOUT=3.0 seconds. The timeout to wait for the RAW file to appear.
           This value is added to the AcquireTime to determine the actual timeout.</li>
       </ul>
