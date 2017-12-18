@@ -31,8 +31,9 @@ drvAsynIPPortConfigure("$(PII_SERVER)","localhost:20000")
 # Set the input and output terminators.
 asynOctetSetInputEos("$(PII_SERVER)", 0, "\r\n")
 asynOctetSetOutputEos("$(PII_SERVER)", 0, "\n")
-asynSetTraceMask("$(PII_SERVER)",0,9)
 asynSetTraceIOMask("$(PII_SERVER)",0,2)
+asynSetTraceIOTruncateSize("$(PII_SERVER)",0,150)
+asynSetTraceMask("$(PII_SERVER)",0,9)
 
 PhotonIIConfig("$(PORT)", "$(PII_SERVER)", 0, 0)
 p2util $(PORT) "load --commands --filename "$(PII_STARTUP_SCRIPT)
