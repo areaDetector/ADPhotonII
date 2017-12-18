@@ -269,7 +269,7 @@ void PhotonII::PhotonIITask()
 {
     int status = asynSuccess;
     int imageCounter;
-        int numImages, numImagesCounter;
+    int numImages, numImagesCounter;
     int imageMode;
     NDArray *pImage;
     double acquireTime;
@@ -286,6 +286,8 @@ void PhotonII::PhotonIITask()
     char fullFileName[PII_MAX_FILENAME_LEN];
     char statusMessage[PII_MAX_MESSAGE_SIZE];
     char *pBuff;
+    char *openQuote, *closeQuote;
+    size_t numChars;
     size_t dims[2];
     int itemp;
     int i;
@@ -393,7 +395,11 @@ void PhotonII::PhotonIITask()
                     
                 }
             }
-            strcpy(fullFileName, pBuff + strlen("bytes to "));
+            openQuote = strchr(fromPhotonII_, '"');
+            closeQuote = strrchr(fromPhotonII_, '"');
+            numChars = closeQuote - openQuote - 1;
+            strncpy(fullFileName, openQuote+1, numChars);
+            fullFileName[numChars] = 0;
             getIntegerParam(NDArrayCallbacks, &arrayCallbacks);
             getIntegerParam(NDArrayCounter, &imageCounter);
             imageCounter++;
